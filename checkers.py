@@ -1,4 +1,5 @@
 import pygame
+from pygame.locals import MOUSEBUTTONDOWN, QUIT
 import time
 import sys
 
@@ -41,17 +42,17 @@ class Game:
             if not result:
                 self.selected = None
                 self.select(row, column)
-        piece = self.board.get_board(row, column)
+        piece = self.board.board[row][column]
         if piece != 0 and piece.color == self.turn:
             self.selected = piece
-            self.valid_moves = self.board.get_valid_moves(piece)
+            self.valid_moves = self.get_valid_moves(piece)
             return True
         return False
 
 
     def _move(self, row, column):
         piece = self.board.get_piece(row, column)
-        if self.selected and piece == 0 and (row,column) in self.valid_moves:
+        if self.selected and piece != 0 and (row,column) in self.valid_moves:
             self.board.move(self.selected, row, column)
         else:
             return False
@@ -65,25 +66,28 @@ class Game:
             self.turn = RED
 
     def get_valid_moves(self, piece):
+        self.valid_moves = []
         if piece:
             row, column = piece.row, piece.column
-            for poss_row in range(row-1, row+2, 2):
+            for poss_row in range(row-1, row+(2*piece.is_king), 2):
                 for poss_col in range(column-1, column+2, 2):
-                    poss_piece = self.board.get_piece(poss_row,poss_col)
-                    print(poss_piece)
-                    # if non-empty square
-                    if poss_piece:
-                        # if opposite colour piece on square
-                        if poss_piece.colour != piece.colour:
-                            poss_jump_loc = self.board.get_piece(row+(poss_row-row), column+(poss_col-column))
-                            # if you can jump over it
-                            if not poss_jump_loc:
-                                self.valid_moves.append(poss_row, poss_col)
-                                jump = True
-                    else:
-                        self.valid_moves.append([poss_row, poss_col])
-            print(self.valid_moves)
-            self.valid_moves = []
+                    # if on the board
+                    if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
+                        poss_piece = self.board.get_piece(poss_row,poss_col)
+                        # if non-empty square
+                        if poss_piece:
+                            # if opposite colour piece on square
+                            if poss_piece.colour != piece.colour:
+                                poss_jump_loc = self.board.get_piece(2*poss_row-row, 2*poss_col-column)
+                                # if jump_loc on the board
+                                if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
+                                    # if you can jump over it
+                                    if not poss_jump_loc:
+                                        self.valid_moves.append((2*poss_row-row, 2*poss_col-column))
+                        else:
+                            self.valid_moves.append((poss_row,poss_col))
+        print(self.valid_moves)
+        return self.valid_moves
 
 
 
@@ -91,7 +95,7 @@ class Board:
     def __init__(self):
         self.board = []
         self.white_pieces = self.black_pieces = 12
-        self.white_kings = self.white_kings = 0
+        self.white_kings = self.black_kings = 0
         self.create_board()
 
     def draw_grid(self, SCREEN):
@@ -159,7 +163,7 @@ class Piece:
         self.calc_pos(row, column)
 
     def __repr__(self):
-        return f'{str(self.colour_name)},({self.row},{self.column})' 
+        return f'{str(self.colour_name)}, ({self.row},{self.column})' 
 
     def calc_pos(self, row, column):
         self.x = BLOCK_SIZE * column + BLOCK_SIZE // 2
@@ -189,13 +193,14 @@ def main():
     
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
             
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 row, column = game.board.find_loc_from_mouse(pos)
+                game.board.move(game.board.get_piece(0,3), 3,2)
                 game.board.move(game.board.get_piece(0,1), 4,3)
                 piece = game.board.get_piece(row, column)
                 game.get_valid_moves(piece)
