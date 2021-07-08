@@ -1,35 +1,87 @@
+# Imports
 import pygame
+import pygame.freetype
 from pygame.locals import MOUSEBUTTONDOWN, QUIT
 import time
 import sys
 
+# Constants / Files
 CROWN = pygame.transform.scale(pygame.image.load('crown.png'), (30, 30))
-WINDOW_WIDTH = 512
-WINDOW_HEIGHT = 512
-
-# Colours
-BLACK = [(50, 50, 50), 'Black']
-WHITE = [(245, 245, 245), 'White']
-RED = [(210, 0, 0), 'Red']
-GRAY = [(100, 100, 100), 'Gray']
-BLUE = [(0, 0, 210), 'Blue']
+FOOTER_HEIGHT = 256
+GRID_HEIGHT = GRID_WIDTH = WINDOW_WIDTH = 512
+WINDOW_HEIGHT = FOOTER_HEIGHT + GRID_HEIGHT
 BLOCK_SIZE = 64
 ROWS = COLUMNS = 8
 
+# Define Colours
+# [(Red, Green, Blue), 'Name for debugging']
+FOOTER = [(10, 10, 10), 'Footer Black']
+WHITE = [(245, 245, 245), 'White']
+RED = [(210, 0, 0), 'Red']
+BLACK = [(50, 50, 50), 'Black']
+LIGHT_GRAY = [(100, 100, 100), 'Light Gray']
+BLUE = [(150, 150, 210), 'Blue']
 
+
+# Game Object; stores initialisation variables as well as helper, constant and reset methods
 class Game:
     def __init__(self, SCREEN):
         self._init()
+        self.fonts = {
+            'bold': pygame.freetype.SysFont('Comic Sans MS', 30, bold=True),
+            'normal': pygame.freetype.SysFont('Comic Sans MS', 30),
+            'button': pygame.freetype.SysFont('Comic Sans MS', 24, italic=True)
+        }
         self.screen = SCREEN
 
     def update(self):
         self.board.draw(self.screen)
+        self.draw_footer()
+        self.check_win()
         pygame.display.update()
 
+    def draw_footer(self):
+        pygame.draw.rect(
+            self.screen, FOOTER[0], (0, GRID_HEIGHT, GRID_WIDTH, FOOTER_HEIGHT))
+        if self.winner:
+            win_message = self.fonts['bold'].render(
+                f'{self.winner[1]} won!', WHITE[0])
+            replay_button = self.fonts['button'].render(
+                'Click anywhere in black box to play again.', WHITE[0])
+
+            self.screen.blit(win_message[0], (30, GRID_HEIGHT + 90))
+            self.screen.blit(replay_button[0], (30, GRID_HEIGHT + 140))
+        else:
+            turn_label = self.fonts['bold'].render(
+                f'Turn: {self.turn[1]}', WHITE[1])
+            self.screen.blit(turn_label[0], (30, GRID_HEIGHT + 30))
+
+            red_title = self.fonts['bold'].render('Red:', WHITE[0])
+            red_kings = self.fonts['normal'].render(
+                f'Kings: {self.board.kings[RED[1]]}', WHITE[0])
+            red_pieces = self.fonts['normal'].render(
+                f'Pieces: {self.board.pieces[RED[1]]}', WHITE[0])
+            self.screen.blit(red_title[0], (30, GRID_HEIGHT + 100))
+            self.screen.blit(red_kings[0], (30, GRID_HEIGHT + 150))
+            self.screen.blit(red_pieces[0], (30, GRID_HEIGHT + 190))
+
+            black_title = self.fonts['bold'].render('Black:', WHITE[0])
+            black_kings = self.fonts['normal'].render(
+                f'Kings: {self.board.kings[BLACK[1]]}', WHITE[0])
+            black_pieces = self.fonts['normal'].render(
+                f'Pieces: {self.board.pieces[BLACK[1]]}', WHITE[0])
+            self.screen.blit(
+                black_title[0], (30 + GRID_WIDTH // 2, GRID_HEIGHT + 100))
+            self.screen.blit(
+                black_kings[0], (30 + GRID_WIDTH // 2, GRID_HEIGHT + 150))
+            self.screen.blit(
+                black_pieces[0], (30 + GRID_WIDTH // 2, GRID_HEIGHT + 190))
+
     def _init(self):
+        self.winner = None
         self.selected = None
-        self.board = Board()
-        self.turn = RED
+        self.board = Board(self)
+        self.turn = BLACK
         self.valid_moves = []
 
     def reset(self):
@@ -60,7 +112,7 @@ class Game:
                                 if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
                                     poss_jump_loc = self.board.get_piece(
                                         2*poss_row-row, 2*poss_col-column)
-                                        # if you can jump over it
+                                    # if you can jump over it
                                     if not poss_jump_loc:
                                         jumps.append((poss_row, poss_col))
                                         valid_moves.append(
@@ -91,9 +143,18 @@ class Game:
         self.board.sugg_moves = valid_moves
         return valid_moves
 
+    def check_win(self):
+        if self.board.pieces[RED[1]] == 0:
+            self.winner = BLACK
+        if self.board.pieces[BLACK[1]] == 0:
+            self.winner = RED
 
+
+# Board Class; stores all variables and methods relating to the grid.
+# Includes drawings methods for the grid, and some helper functions.
 class Board:
-    def __init__(self):
+    def __init__(self, game):
+        self.game = game
         self.board = []
         self.pieces = {
             RED[1]: 12,
@@ -146,6 +207,7 @@ class Board:
                 self.kings[piece.colour[1]] += 1
             if jump:
                 jump.remove()
+            self.game.change_turn()
 
     def get_piece(self, row, column):
         return self.board[row][column]
@@ -158,8 +220,11 @@ class Board:
 
     def draw_sugg_moves(self, SCREEN):
         for row, column, jumps in self.sugg_moves:
-            pass
-        #pygame.draw.circle(SCREEN, BLUE[0], (column*BLOCK_SIZE+(BLOCK_SIZE//2), row*BLOCK_SIZE+(BLOCK_SIZE//2)), BLOCK_SIZE//5)
+            pygame.draw.circle(SCREEN, BLUE[0], (column*BLOCK_SIZE+(
+                BLOCK_SIZE//2), row*BLOCK_SIZE+(BLOCK_SIZE//2)), BLOCK_SIZE//5)
+
+# Piece Class; stores all variables and methods relating to the checker itself.
+# Includes drawings methods for the checker, as well as helper methods for position and state changes.
 
 
 class Piece:
@@ -170,17 +235,13 @@ class Piece:
         self.row = row
         self.column = column
         self.colour = colour
-        self.colour_name = colour[1]
         self.is_king = False
-        self.is_selected = False
         self.board = board
-        # if true (red) move down the board, if false (black) move up the board
-        self.direction = 1 if self.colour == RED else -1
         self.x, self.y = 0, 0
         self.calc_pos(row, column)
 
     def __repr__(self):
-        return f'{str(self.colour_name)}, ({self.row},{self.column})'
+        return f'{str(self.colour[1])}, ({self.row},{self.column})'
 
     def calc_pos(self, row, column):
         self.x = BLOCK_SIZE * column + BLOCK_SIZE // 2
@@ -192,7 +253,7 @@ class Piece:
     def draw_piece(self, SCREEN):
         radius = BLOCK_SIZE // 2 - self.PADDING
         pygame.draw.circle(
-            SCREEN, GRAY[0], (self.x, self.y), radius + self.BORDER)
+            SCREEN, LIGHT_GRAY[0], (self.x, self.y), radius + self.BORDER)
         pygame.draw.circle(SCREEN, self.colour[0], (self.x, self.y), radius)
         if self.is_king:
             SCREEN.blit(CROWN, (self.x - (CROWN.get_width() // 2),
@@ -209,11 +270,15 @@ class Piece:
         self.column = column
         self.calc_pos(row, column)
 
+# Main loop; Handles user input, and calls some initial game-related constants.
+
+
 def main():
     global SCREEN, CLOCK
     pygame.init()
     CLOCK = pygame.time.Clock()
     SCREEN = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    pygame.display.set_caption('Checkers')
     game = Game(SCREEN)
 
     while True:
@@ -224,17 +289,27 @@ def main():
 
             if event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                row, column = game.board.find_loc_from_mouse(pos)
-                piece = game.board.get_piece(row, column)
-                if piece:
-                    game.board.sugg_piece = piece
-                    game.get_valid_moves(piece)
+                if 0 < pos[0] < GRID_WIDTH and GRID_HEIGHT < pos[1] < WINDOW_HEIGHT and game.winner:
+                    game.reset()
                 else:
-                    picked_move = [move for move in game.board.sugg_moves if move[0] == row and move[1] == column]
-                    if picked_move:
-                        row, column, jump = picked_move[0]
-                        game.board.move(game.board.sugg_piece, row, column, jump)
-                    game.board.sugg_moves = []
+                    row, column = game.board.find_loc_from_mouse(pos)
+                    piece = game.board.get_piece(row, column)
+                    if piece:
+                        if piece.colour == game.turn:
+                            game.board.sugg_piece = piece
+                            game.get_valid_moves(piece)
+                    else:
+                        picked_move = [
+                            move for move in game.board.sugg_moves if move[0] == row and move[1] == column]
+                        if picked_move:
+                            row, column, jump = picked_move[0]
+                            game.board.move(game.board.sugg_piece,
+                                            row, column, jump)
+                        game.board.sugg_moves = []
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    game.winner = RED
         game.update()
 
 
