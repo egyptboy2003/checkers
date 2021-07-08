@@ -271,12 +271,9 @@ class Piece:
         self.calc_pos(row, column)
 
 # Main loop; Handles user input, and calls some initial game-related constants.
-
-
 def main():
     global SCREEN, CLOCK
     pygame.init()
-    CLOCK = pygame.time.Clock()
     SCREEN = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('Checkers')
     game = Game(SCREEN)
@@ -291,6 +288,8 @@ def main():
                 pos = pygame.mouse.get_pos()
                 if 0 < pos[0] < GRID_WIDTH and GRID_HEIGHT < pos[1] < WINDOW_HEIGHT and game.winner:
                     game.reset()
+                elif 0 < pos[0] < GRID_WIDTH and GRID_HEIGHT < pos[1] < WINDOW_HEIGHT:
+                    pass
                 else:
                     row, column = game.board.find_loc_from_mouse(pos)
                     piece = game.board.get_piece(row, column)
@@ -306,10 +305,6 @@ def main():
                             game.board.move(game.board.sugg_piece,
                                             row, column, jump)
                         game.board.sugg_moves = []
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    game.winner = RED
         game.update()
 
 
