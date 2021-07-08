@@ -12,10 +12,9 @@ BLACK = [(50, 50, 50), 'Black']
 WHITE = [(245, 245, 245), 'White']
 RED = [(210, 0, 0), 'Red']
 GRAY = [(100, 100, 100), 'Gray']
-
+BLUE = [(0, 0, 210), 'Blue']
 BLOCK_SIZE = 64
 ROWS = COLUMNS = 8
-pieces = []
 
 
 class Game:
@@ -36,91 +35,76 @@ class Game:
     def reset(self):
         self._init()
 
-    def select(self, row, column):
-        if self.selected:
-            result = self._move(row, column)
-            if not result:
-                self.selected = None
-                self.select(row, column)
-        piece = self.board.board[row][column]
-        if piece != 0 and piece.color == self.turn:
-            self.selected = piece
-            self.valid_moves = self.get_valid_moves(piece)
-            return True
-        return False
-
-    def _move(self, row, column):
-        piece = self.board.get_piece(row, column)
-        if self.selected and piece != 0 and (row, column) in self.valid_moves:
-            self.board.move(self.selected, row, column)
-        else:
-            return False
-
-        return True
-
     def change_turn(self):
         if self.turn == RED:
-            self.turn = WHITE
+            self.turn = BLACK
         else:
             self.turn = RED
 
     def get_valid_moves(self, piece):
-        self.valid_moves = []
+        jumps = []
+        valid_moves = self.valid_moves = []
         if piece:
-            direction = piece.direction
             row, column = piece.row, piece.column
-            if piece.color == RED or piece.is_king:
-                for poss_row in range(row-1, row+2, 2):
-                    for poss_col in range(column-1, column+2, 2):
-                        # if on the board
-                        if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
-                            poss_piece = self.board.get_piece(
-                                poss_row, poss_col)
-                            # if non-empty square
-                            if poss_piece:
-                                # if opposite colour piece on square
-                                if poss_piece.colour != piece.colour:
+            if piece.colour == BLACK or piece.is_king:
+                poss_row = row - 1
+                for poss_col in range(column-1, column+2, 2):
+                    # if on the board
+                    if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
+                        poss_piece = self.board.get_piece(
+                            poss_row, poss_col)
+                        # if non-empty square
+                        if poss_piece:
+                            # if opposite colour piece on square
+                            if poss_piece.colour != piece.colour:
+                                if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
                                     poss_jump_loc = self.board.get_piece(
                                         2*poss_row-row, 2*poss_col-column)
-                                    # if jump_loc on the board
-                                    if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
                                         # if you can jump over it
-                                        if not poss_jump_loc:
-                                            self.valid_moves.append(
-                                                (2*poss_row-row, 2*poss_col-column))
-                            else:
-                                self.valid_moves.append((poss_row, poss_col))
+                                    if not poss_jump_loc:
+                                        jumps.append((poss_row, poss_col))
+                                        valid_moves.append(
+                                            (2*poss_row-row, 2*poss_col-column, poss_piece))
+                        else:
+                            valid_moves.append((poss_row, poss_col, None))
 
-            if piece.color == WHITE or piece.is_king:
-                for poss_row in range(row-1, row+2, 2):
-                    for poss_col in range(column-1, column+2, 2):
-                        # if on the board
-                        if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
-                            poss_piece = self.board.get_piece(
-                                poss_row, poss_col)
-                            # if non-empty square
-                            if poss_piece:
-                                # if opposite colour piece on square
-                                if poss_piece.colour != piece.colour:
+            if piece.colour == RED or piece.is_king:
+                poss_row = row + 1
+                for poss_col in range(column-1, column+2, 2):
+                    # if on the board
+                    if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
+                        poss_piece = self.board.get_piece(
+                            poss_row, poss_col)
+                        # if non-empty square
+                        if poss_piece:
+                            # if opposite colour piece on square
+                            if poss_piece.colour != piece.colour:
+                                if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
                                     poss_jump_loc = self.board.get_piece(
                                         2*poss_row-row, 2*poss_col-column)
-                                    # if jump_loc on the board
-                                    if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
-                                        # if you can jump over it
-                                        if not poss_jump_loc:
-                                            self.valid_moves.append(
-                                                (2*poss_row-row, 2*poss_col-column))
-                            else:
-                                self.valid_moves.append((poss_row, poss_col))
-        print(self.valid_moves)
-        return self.valid_moves
+                                    # if you can jump over it
+                                    if not poss_jump_loc:
+                                        valid_moves.append(
+                                            (2*poss_row-row, 2*poss_col-column, poss_piece))
+                        else:
+                            valid_moves.append((poss_row, poss_col, None))
+        self.board.sugg_moves = valid_moves
+        return valid_moves
 
 
 class Board:
     def __init__(self):
         self.board = []
-        self.white_pieces = self.black_pieces = 12
-        self.white_kings = self.black_kings = 0
+        self.pieces = {
+            RED[1]: 12,
+            BLACK[1]: 12
+        }
+        self.kings = {
+            RED[1]: 0,
+            BLACK[1]: 0
+        }
+        self.sugg_moves = []
+        self.sugg_piece = ''
         self.create_board()
 
     def draw_grid(self, SCREEN):
@@ -136,9 +120,9 @@ class Board:
             for column in range(COLUMNS):
                 if column % 2 == ((row+1) % 2):
                     if row < 3:
-                        self.board[row].append(Piece(row, column, RED))
+                        self.board[row].append(Piece(row, column, RED, self))
                     elif row > 4:
-                        self.board[row].append(Piece(row, column, BLACK))
+                        self.board[row].append(Piece(row, column, BLACK, self))
                     else:
                         self.board[row].append(0)
                 else:
@@ -146,22 +130,22 @@ class Board:
 
     def draw(self, SCREEN):
         self.draw_grid(SCREEN)
+        self.draw_sugg_moves(SCREEN)
         for row in range(ROWS):
             for column in range(COLUMNS):
                 piece = self.board[row][column]
                 if piece:
                     piece.draw_piece(SCREEN)
 
-    def move(self, piece, row, column):
-        if piece != 0:
+    def move(self, piece, row, column, jump):
+        if piece:
             self.board[piece.row][piece.column], self.board[row][column] = self.board[row][column], self.board[piece.row][piece.column]
             piece.move(piece, row, column)
-            if row == ROWS or row == 0:
+            if row == (ROWS-1) or row == 0:
                 piece.make_king()
-                if piece.colour == WHITE:
-                    self.white_kings += 1
-                else:
-                    self.black_kings += 1
+                self.kings[piece.colour[1]] += 1
+            if jump:
+                jump.remove()
 
     def get_piece(self, row, column):
         return self.board[row][column]
@@ -172,19 +156,25 @@ class Board:
         column = x // BLOCK_SIZE
         return row, column
 
+    def draw_sugg_moves(self, SCREEN):
+        for row, column, jumps in self.sugg_moves:
+            pass
+        #pygame.draw.circle(SCREEN, BLUE[0], (column*BLOCK_SIZE+(BLOCK_SIZE//2), row*BLOCK_SIZE+(BLOCK_SIZE//2)), BLOCK_SIZE//5)
+
 
 class Piece:
     PADDING = 10
     BORDER = 2
 
-    def __init__(self, row, column, colour):
+    def __init__(self, row, column, colour, board):
         self.row = row
         self.column = column
-        self.colour = colour[0]
+        self.colour = colour
         self.colour_name = colour[1]
         self.is_king = False
         self.is_selected = False
-        # if true (red) move down the board, if false (white) move up the board
+        self.board = board
+        # if true (red) move down the board, if false (black) move up the board
         self.direction = 1 if self.colour == RED else -1
         self.x, self.y = 0, 0
         self.calc_pos(row, column)
@@ -203,16 +193,21 @@ class Piece:
         radius = BLOCK_SIZE // 2 - self.PADDING
         pygame.draw.circle(
             SCREEN, GRAY[0], (self.x, self.y), radius + self.BORDER)
-        pygame.draw.circle(SCREEN, self.colour, (self.x, self.y), radius)
+        pygame.draw.circle(SCREEN, self.colour[0], (self.x, self.y), radius)
         if self.is_king:
             SCREEN.blit(CROWN, (self.x - (CROWN.get_width() // 2),
                         self.y - (CROWN.get_height() // 2)))
+
+    def remove(self):
+        self.board.board[self.row][self.column] = 0
+        self.board.pieces[self.colour[1]] -= 1
+        if self.is_king:
+            self.board.kings[self.colour[1]] -= 1
 
     def move(self, piece, row, column):
         self.row = row
         self.column = column
         self.calc_pos(row, column)
-
 
 def main():
     global SCREEN, CLOCK
@@ -230,10 +225,16 @@ def main():
             if event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 row, column = game.board.find_loc_from_mouse(pos)
-                game.board.move(game.board.get_piece(0, 3), 3, 2)
-                game.board.move(game.board.get_piece(0, 1), 4, 3)
                 piece = game.board.get_piece(row, column)
-                game.get_valid_moves(piece)
+                if piece:
+                    game.board.sugg_piece = piece
+                    game.get_valid_moves(piece)
+                else:
+                    picked_move = [move for move in game.board.sugg_moves if move[0] == row and move[1] == column]
+                    if picked_move:
+                        row, column, jump = picked_move[0]
+                        game.board.move(game.board.sugg_piece, row, column, jump)
+                    game.board.sugg_moves = []
         game.update()
 
 
