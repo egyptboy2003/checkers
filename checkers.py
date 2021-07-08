@@ -3,19 +3,20 @@ from pygame.locals import MOUSEBUTTONDOWN, QUIT
 import time
 import sys
 
-CROWN = pygame.transform.scale(pygame.image.load('crown.png'), (30,30))
+CROWN = pygame.transform.scale(pygame.image.load('crown.png'), (30, 30))
 WINDOW_WIDTH = 512
 WINDOW_HEIGHT = 512
 
 # Colours
 BLACK = [(50, 50, 50), 'Black']
 WHITE = [(245, 245, 245), 'White']
-RED = [(210,0,0), 'Red']
-GRAY = [(100,100,100), 'Gray']
+RED = [(210, 0, 0), 'Red']
+GRAY = [(100, 100, 100), 'Gray']
 
 BLOCK_SIZE = 64
 ROWS = COLUMNS = 8
 pieces = []
+
 
 class Game:
     def __init__(self, SCREEN):
@@ -25,14 +26,13 @@ class Game:
     def update(self):
         self.board.draw(self.screen)
         pygame.display.update()
-    
+
     def _init(self):
         self.selected = None
         self.board = Board()
         self.turn = RED
         self.valid_moves = []
-        
-    
+
     def reset(self):
         self._init()
 
@@ -49,10 +49,9 @@ class Game:
             return True
         return False
 
-
     def _move(self, row, column):
         piece = self.board.get_piece(row, column)
-        if self.selected and piece != 0 and (row,column) in self.valid_moves:
+        if self.selected and piece != 0 and (row, column) in self.valid_moves:
             self.board.move(self.selected, row, column)
         else:
             return False
@@ -68,27 +67,53 @@ class Game:
     def get_valid_moves(self, piece):
         self.valid_moves = []
         if piece:
+            direction = piece.direction
             row, column = piece.row, piece.column
-            for poss_row in range(row-1, row+(2*piece.is_king), 2):
-                for poss_col in range(column-1, column+2, 2):
-                    # if on the board
-                    if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
-                        poss_piece = self.board.get_piece(poss_row,poss_col)
-                        # if non-empty square
-                        if poss_piece:
-                            # if opposite colour piece on square
-                            if poss_piece.colour != piece.colour:
-                                poss_jump_loc = self.board.get_piece(2*poss_row-row, 2*poss_col-column)
-                                # if jump_loc on the board
-                                if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
-                                    # if you can jump over it
-                                    if not poss_jump_loc:
-                                        self.valid_moves.append((2*poss_row-row, 2*poss_col-column))
-                        else:
-                            self.valid_moves.append((poss_row,poss_col))
+            if piece.color == RED or piece.is_king:
+                for poss_row in range(row-1, row+2, 2):
+                    for poss_col in range(column-1, column+2, 2):
+                        # if on the board
+                        if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
+                            poss_piece = self.board.get_piece(
+                                poss_row, poss_col)
+                            # if non-empty square
+                            if poss_piece:
+                                # if opposite colour piece on square
+                                if poss_piece.colour != piece.colour:
+                                    poss_jump_loc = self.board.get_piece(
+                                        2*poss_row-row, 2*poss_col-column)
+                                    # if jump_loc on the board
+                                    if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
+                                        # if you can jump over it
+                                        if not poss_jump_loc:
+                                            self.valid_moves.append(
+                                                (2*poss_row-row, 2*poss_col-column))
+                            else:
+                                self.valid_moves.append((poss_row, poss_col))
+
+            if piece.color == WHITE or piece.is_king:
+                for poss_row in range(row-1, row+2, 2):
+                    for poss_col in range(column-1, column+2, 2):
+                        # if on the board
+                        if (0 <= poss_row <= 7) and (0 <= poss_col <= 7):
+                            poss_piece = self.board.get_piece(
+                                poss_row, poss_col)
+                            # if non-empty square
+                            if poss_piece:
+                                # if opposite colour piece on square
+                                if poss_piece.colour != piece.colour:
+                                    poss_jump_loc = self.board.get_piece(
+                                        2*poss_row-row, 2*poss_col-column)
+                                    # if jump_loc on the board
+                                    if (0 <= 2*poss_row-row <= 7) and (0 <= 2*poss_col-column <= 7):
+                                        # if you can jump over it
+                                        if not poss_jump_loc:
+                                            self.valid_moves.append(
+                                                (2*poss_row-row, 2*poss_col-column))
+                            else:
+                                self.valid_moves.append((poss_row, poss_col))
         print(self.valid_moves)
         return self.valid_moves
-
 
 
 class Board:
@@ -104,7 +129,7 @@ class Board:
             for column in range(row % 2, COLUMNS, 2):
                 pygame.draw.rect(SCREEN, BLACK[0], (row*BLOCK_SIZE, column*BLOCK_SIZE,
                                                     BLOCK_SIZE, BLOCK_SIZE))
-                    
+
     def create_board(self):
         for row in range(ROWS):
             self.board.append([])
@@ -118,7 +143,7 @@ class Board:
                         self.board[row].append(0)
                 else:
                     self.board[row].append(0)
-                    
+
     def draw(self, SCREEN):
         self.draw_grid(SCREEN)
         for row in range(ROWS):
@@ -126,7 +151,7 @@ class Board:
                 piece = self.board[row][column]
                 if piece:
                     piece.draw_piece(SCREEN)
-    
+
     def move(self, piece, row, column):
         if piece != 0:
             self.board[piece.row][piece.column], self.board[row][column] = self.board[row][column], self.board[piece.row][piece.column]
@@ -147,10 +172,11 @@ class Board:
         column = x // BLOCK_SIZE
         return row, column
 
-    
+
 class Piece:
     PADDING = 10
     BORDER = 2
+
     def __init__(self, row, column, colour):
         self.row = row
         self.column = column
@@ -158,12 +184,13 @@ class Piece:
         self.colour_name = colour[1]
         self.is_king = False
         self.is_selected = False
-        self.direction = True if self.colour == RED else False      # if true (red) move down the board, if false (white) move up the board
+        # if true (red) move down the board, if false (white) move up the board
+        self.direction = 1 if self.colour == RED else -1
         self.x, self.y = 0, 0
         self.calc_pos(row, column)
 
     def __repr__(self):
-        return f'{str(self.colour_name)}, ({self.row},{self.column})' 
+        return f'{str(self.colour_name)}, ({self.row},{self.column})'
 
     def calc_pos(self, row, column):
         self.x = BLOCK_SIZE * column + BLOCK_SIZE // 2
@@ -174,15 +201,18 @@ class Piece:
 
     def draw_piece(self, SCREEN):
         radius = BLOCK_SIZE // 2 - self.PADDING
-        pygame.draw.circle(SCREEN, GRAY[0], (self.x, self.y), radius + self.BORDER)
+        pygame.draw.circle(
+            SCREEN, GRAY[0], (self.x, self.y), radius + self.BORDER)
         pygame.draw.circle(SCREEN, self.colour, (self.x, self.y), radius)
         if self.is_king:
-            SCREEN.blit(CROWN, (self.x - (CROWN.get_width() // 2), self.y - (CROWN.get_height() // 2)))
-    
+            SCREEN.blit(CROWN, (self.x - (CROWN.get_width() // 2),
+                        self.y - (CROWN.get_height() // 2)))
+
     def move(self, piece, row, column):
         self.row = row
         self.column = column
         self.calc_pos(row, column)
+
 
 def main():
     global SCREEN, CLOCK
@@ -190,20 +220,21 @@ def main():
     CLOCK = pygame.time.Clock()
     SCREEN = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     game = Game(SCREEN)
-    
+
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            
+
             if event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 row, column = game.board.find_loc_from_mouse(pos)
-                game.board.move(game.board.get_piece(0,3), 3,2)
-                game.board.move(game.board.get_piece(0,1), 4,3)
+                game.board.move(game.board.get_piece(0, 3), 3, 2)
+                game.board.move(game.board.get_piece(0, 1), 4, 3)
                 piece = game.board.get_piece(row, column)
                 game.get_valid_moves(piece)
         game.update()
+
 
 main()
