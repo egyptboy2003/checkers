@@ -1,9 +1,8 @@
 # Imports
+import sys
 import pygame
 import pygame.freetype
 from pygame.locals import MOUSEBUTTONDOWN, QUIT
-import time
-import sys
 
 # Constants / Files
 CROWN = pygame.transform.scale(pygame.image.load('crown.png'), (30, 30))
@@ -21,7 +20,6 @@ RED = [(210, 0, 0), 'Red']
 BLACK = [(50, 50, 50), 'Black']
 LIGHT_GRAY = [(100, 100, 100), 'Light Gray']
 BLUE = [(150, 150, 210), 'Blue']
-
 
 # Game Object; stores initialisation variables as well as helper, constant and reset methods
 class Game:
@@ -44,8 +42,12 @@ class Game:
         pygame.draw.rect(
             self.screen, FOOTER[0], (0, GRID_HEIGHT, GRID_WIDTH, FOOTER_HEIGHT))
         if self.winner:
-            win_message = self.fonts['bold'].render(
-                f'{self.winner[1]} won!', WHITE[0])
+            if self.winner == 'DRAW':
+                win_message = self.fonts['bold'].render(
+                f'STALEMATE! No possible moves.', WHITE[0])
+            else:
+                win_message = self.fonts['bold'].render(
+                    f'{self.winner[1]} won!', WHITE[0])
             replay_button = self.fonts['button'].render(
                 'Click anywhere in black box to play again.', WHITE[0])
 
@@ -141,6 +143,8 @@ class Game:
                         else:
                             valid_moves.append((poss_row, poss_col, None))
         self.board.sugg_moves = valid_moves
+        if not valid_moves and (self.board.pieces[piece.colour[1]] == 1):
+            self.winner = 'DRAW'
         return valid_moves
 
     def check_win(self):
@@ -201,7 +205,7 @@ class Board:
     def move(self, piece, row, column, jump):
         if piece:
             self.board[piece.row][piece.column], self.board[row][column] = self.board[row][column], self.board[piece.row][piece.column]
-            piece.move(piece, row, column)
+            piece.move(row, column)
             if row == (ROWS-1) or row == 0:
                 piece.make_king()
                 self.kings[piece.colour[1]] += 1
@@ -265,12 +269,14 @@ class Piece:
         if self.is_king:
             self.board.kings[self.colour[1]] -= 1
 
-    def move(self, piece, row, column):
+    def move(self, row, column):
         self.row = row
         self.column = column
         self.calc_pos(row, column)
 
 # Main loop; Handles user input, and calls some initial game-related constants.
+
+
 def main():
     global SCREEN, CLOCK
     pygame.init()
@@ -305,6 +311,10 @@ def main():
                             game.board.move(game.board.sugg_piece,
                                             row, column, jump)
                         game.board.sugg_moves = []
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    game.winner = 'DRAW'
+
         game.update()
 
 
